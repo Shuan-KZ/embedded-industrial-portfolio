@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>设备管理系统</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:"Microsoft YaHei","PingFang SC",system-ui,sans-serif;background:#f0f2f5;min-height:100vh;color:#333}
+.header{background:linear-gradient(135deg,#1a1a2e,#16213e);color:#fff;padding:1.2rem 2rem;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1rem}
+.header h1{font-size:1.4rem;font-weight:500;letter-spacing:1px}
+.header h1 span{color:#38b8c4}
+.container{max-width:1300px;margin:0 auto;padding:1.5rem}
+.toolbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;gap:1rem;flex-wrap:wrap}
+.search-box{display:flex;gap:0.5rem}
+.search-box input,.search-box select{padding:0.5rem 0.75rem;border:1px solid #d9d9d9;border-radius:6px;font-size:0.9rem;outline:none;transition:border-color .2s}
+.search-box input:focus,.search-box select:focus{border-color:#38b8c4}
+.search-box input{width:220px}
+.btn{padding:0.5rem 1.2rem;border:none;border-radius:6px;font-size:0.9rem;cursor:pointer;transition:all .2s;font-weight:500}
+.btn-primary{background:#38b8c4;color:#fff}
+.btn-primary:hover{background:#2d9da8}
+.btn-success{background:#46c288;color:#fff}
+.btn-success:hover{background:#3aa872}
+.btn-warning{background:#d89c68;color:#fff}
+.btn-warning:hover{background:#c48850}
+.btn-danger{background:#e0556a;color:#fff}
+.btn-danger:hover{background:#c94055}
+.btn-outline{background:#fff;color:#38b8c4;border:1px solid #38b8c4}
+.btn-outline:hover{background:#e6f7f9}
+.table-wrapper{background:#fff;border-radius:10px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,0.06)}
+table{width:100%;border-collapse:collapse}
+thead{background:#f7f8fa}
+th{padding:0.85rem 0.75rem;text-align:left;font-weight:500;font-size:0.85rem;color:#666;border-bottom:1px solid #e8e8e8;white-space:nowrap}
+td{padding:0.75rem;border-bottom:1px solid #f0f0f0;font-size:0.9rem}
+tr:hover td{background:#f5f9fa}
+.actions{display:flex;gap:0.4rem;flex-wrap:wrap}
+.actions .btn{padding:0.3rem 0.7rem;font-size:0.8rem}
+.badge{display:inline-block;padding:0.2rem 0.65rem;border-radius:12px;font-size:0.78rem;font-weight:500}
+.badge-online{background:#e6f7ee;color:#46c288}
+.badge-offline{background:#fde8ec;color:#e0556a}
+.badge-maintenance{background:#fef4e8;color:#d89c68}
+.empty{text-align:center;padding:3rem;color:#999;font-size:0.95rem}
+
+/* Modal */
+.modal-overlay{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.4);z-index:1000;justify-content:center;align-items:center}
+.modal-overlay.active{display:flex}
+.modal{background:#fff;border-radius:12px;width:520px;max-width:95vw;max-height:90vh;overflow-y:auto;box-shadow:0 8px 30px rgba(0,0,0,0.15);animation:slideIn .25s ease}
+@keyframes slideIn{from{opacity:0;transform:translateY(-30px)}to{opacity:1;transform:translateY(0)}}
+.modal-header{padding:1rem 1.5rem;border-bottom:1px solid #f0f0f0;display:flex;justify-content:space-between;align-items:center}
+.modal-header h3{font-size:1.1rem;font-weight:500}
+.modal-close{background:none;border:none;font-size:1.5rem;cursor:pointer;color:#999;line-height:1;padding:0 0.3rem}
+.modal-close:hover{color:#333}
+.modal-body{padding:1.5rem}
+.modal-footer{padding:1rem 1.5rem;border-top:1px solid #f0f0f0;display:flex;justify-content:flex-end;gap:0.6rem}
+.form-group{margin-bottom:1rem}
+.form-group label{display:block;margin-bottom:0.35rem;font-size:0.85rem;color:#555;font-weight:500}
+.form-group input,.form-group select{width:100%;padding:0.55rem 0.75rem;border:1px solid #d9d9d9;border-radius:6px;font-size:0.9rem;outline:none;transition:border-color .2s}
+.form-group input:focus,.form-group select:focus{border-color:#38b8c4;box-shadow:0 0 0 2px rgba(56,184,196,0.12)}
+.form-row{display:flex;gap:0.8rem}
+.form-row .form-group{flex:1}
+
+/* Confirm dialog */
+.confirm-overlay{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.4);z-index:1100;justify-content:center;align-items:center}
+.confirm-overlay.active{display:flex}
+.confirm-box{background:#fff;border-radius:12px;width:380px;max-width:95vw;padding:1.5rem;text-align:center;box-shadow:0 8px 30px rgba(0,0,0,0.15)}
+.confirm-box .icon{font-size:2.5rem;margin-bottom:0.5rem}
+.confirm-box p{margin:0.5rem 0 1.2rem;color:#666;font-size:0.95rem}
+.confirm-box .confirm-name{font-weight:bold;color:#333;font-size:1rem}
+
+/* Toast */
+.toast{position:fixed;top:1.5rem;right:1.5rem;padding:0.75rem 1.5rem;border-radius:8px;color:#fff;font-size:0.9rem;z-index:2000;animation:fadeIn .3s ease;box-shadow:0 4px 12px rgba(0,0,0,0.15);display:none}
+.toast.show{display:block}
+.toast.success{background:#46c288}
+.toast.error{background:#e0556a}
+@keyframes fadeIn{from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:translateX(0)}}
+
+@media(max-width:768px){
+  .header{padding:1rem}
+  .header h1{font-size:1.1rem}
+  .container{padding:0.8rem}
+  th,td{font-size:0.8rem;padding:0.5rem}
+  .actions .btn{padding:0.25rem 0.5rem;font-size:0.72rem}
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1><span>&#9608;</span> 设备管理系统</h1>
+</div>
+
+<div class="container">
+  <div class="toolbar">
+    <div class="search-box">
+      <input type="text" id="searchInput" placeholder="设备名称 / 编码搜索...">
+      <select id="typeFilter">
+        <option value="">全部类型</option>
+        <option value="CNC">CNC</option>
+        <option value="GRINDER">GRINDER</option>
+        <option value="DRILL">DRILL</option>
+        <option value="PRESS">PRESS</option>
+        <option value="INJECTION">INJECTION</option>
+      </select>
+      <a href="/dashboard.html" class="btn btn-outline" style="text-decoration:none">工业大屏</a>
+      <button class="btn btn-outline" onclick="loadDevices()">刷新</button>
+    </div>
+    <button class="btn btn-primary" onclick="openAddModal()">+ 新增设备</button>
+  </div>
+
+  <div class="table-wrapper">
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>设备名称</th>
+          <th>设备编码</th>
+          <th>设备类型</th>
+          <th>状态</th>
+          <th>位置</th>
+          <th>IP地址</th>
+          <th>更新时间</th>
+          <th>操作</th>
+        </tr>
+      </thead>
+      <tbody id="tableBody">
+        <tr><td colspan="9" class="empty">加载中...</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Add/Edit Modal -->
+<div class="modal-overlay" id="deviceModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="modalTitle">新增设备</h3>
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="editId">
+      <div class="form-row">
+        <div class="form-group">
+          <label>设备名称 *</label>
+          <input type="text" id="deviceName" placeholder="例:西门子PLC-01">
+        </div>
+        <div class="form-group">
+          <label>设备编码 *</label>
+          <input type="text" id="deviceCode" placeholder="例:PLC-001">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>设备类型</label>
+          <select id="deviceType">
+            <option value="">请选择</option>
+            <option value="CNC">CNC</option>
+            <option value="GRINDER">GRINDER</option>
+            <option value="DRILL">DRILL</option>
+            <option value="PRESS">PRESS</option>
+            <option value="INJECTION">INJECTION</option>
+            <option value="OTHER">OTHER</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>状态</label>
+          <select id="status">
+            <option value="ONLINE">ONLINE</option>
+            <option value="OFFLINE">OFFLINE</option>
+            <option value="MAINTENANCE">MAINTENANCE</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>位置</label>
+          <input type="text" id="location" placeholder="例:A车间-1号产线">
+        </div>
+        <div class="form-group">
+          <label>IP地址</label>
+          <input type="text" id="ipAddress" placeholder="例:192.168.1.101">
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal()">取消</button>
+      <button class="btn btn-primary" id="saveBtn" onclick="saveDevice()">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- Delete Confirm -->
+<div class="confirm-overlay" id="confirmDialog">
+  <div class="confirm-box">
+    <div class="icon">&#9888;</div>
+    <p>确定删除设备</p>
+    <p class="confirm-name" id="confirmName"></p>
+    <p>删除后不可恢复</p>
+    <button class="btn btn-outline" onclick="closeConfirm()" style="margin-right:0.5rem">取消</button>
+    <button class="btn btn-danger" id="confirmBtn">确认删除</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const API = '/device';
+
+let allDevices = [];
+let editingId = null;
+let deletingId = null;
+
+async function loadDevices(){
+  try{
+    const res = await fetch(API+'/list');
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    allDevices = await res.json();
+    renderTable();
+  }catch(e){
+    showToast('加载失败: '+e.message, 'error');
+    document.getElementById('tableBody').innerHTML = '<tr><td colspan="9" class="empty">加载失败，请检查后端服务</td></tr>';
+  }
+}
+
+function renderTable(){
+  const search = (document.getElementById('searchInput').value||'').toLowerCase();
+  const type = document.getElementById('typeFilter').value;
+
+  let filtered = allDevices;
+  if(search){
+    filtered = filtered.filter(d =>
+      (d.deviceName||'').toLowerCase().includes(search) ||
+      (d.deviceCode||'').toLowerCase().includes(search)
+    );
+  }
+  if(type){
+    filtered = filtered.filter(d => d.deviceType === type);
+  }
+
+  const tbody = document.getElementById('tableBody');
+  if(filtered.length === 0){
+    tbody.innerHTML = '<tr><td colspan="9" class="empty">暂无数据</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = filtered.map(d => `
+    <tr>
+      <td>${d.id}</td>
+      <td><strong>${esc(d.deviceName)}</strong></td>
+      <td>${esc(d.deviceCode)}</td>
+      <td>${esc(d.deviceType||'')}</td>
+      <td><span class="badge badge-${(d.status||'').toLowerCase()}">${esc(d.status||'')}</span></td>
+      <td>${esc(d.location||'')}</td>
+      <td>${esc(d.ipAddress||'')}</td>
+      <td>${fmtTime(d.updateTime)}</td>
+      <td>
+        <div class="actions">
+          <button class="btn btn-warning" onclick="openEditModal(${d.id})">编辑</button>
+          <button class="btn btn-danger" onclick="openConfirm(${d.id},'${esc(d.deviceName)}')">删除</button>
+        </div>
+      </td>
+    </tr>
+  `).join('');
+}
+
+function openAddModal(){
+  editingId = null;
+  document.getElementById('modalTitle').textContent = '新增设备';
+  document.getElementById('editId').value = '';
+  document.getElementById('deviceName').value = '';
+  document.getElementById('deviceCode').value = '';
+  document.getElementById('deviceType').value = '';
+  document.getElementById('status').value = 'ONLINE';
+  document.getElementById('location').value = '';
+  document.getElementById('ipAddress').value = '';
+  document.getElementById('deviceModal').classList.add('active');
+}
+
+function openEditModal(id){
+  const d = allDevices.find(x => x.id === id);
+  if(!d) return;
+  editingId = id;
+  document.getElementById('modalTitle').textContent = '编辑设备 #'+id;
+  document.getElementById('editId').value = id;
+  document.getElementById('deviceName').value = d.deviceName||'';
+  document.getElementById('deviceCode').value = d.deviceCode||'';
+  document.getElementById('deviceType').value = d.deviceType||'';
+  document.getElementById('status').value = d.status||'ONLINE';
+  document.getElementById('location').value = d.location||'';
+  document.getElementById('ipAddress').value = d.ipAddress||'';
+  document.getElementById('deviceModal').classList.add('active');
+}
+
+function closeModal(){
+  document.getElementById('deviceModal').classList.remove('active');
+}
+
+async function saveDevice(){
+  const name = document.getElementById('deviceName').value.trim();
+  const code = document.getElementById('deviceCode').value.trim();
+  if(!name||!code){ showToast('设备名称和编码为必填项','error'); return; }
+
+  const body = {
+    deviceName: name,
+    deviceCode: code,
+    deviceType: document.getElementById('deviceType').value,
+    status: document.getElementById('status').value,
+    location: document.getElementById('location').value,
+    ipAddress: document.getElementById('ipAddress').value
+  };
+
+  try{
+    let res;
+    if(editingId){
+      body.id = editingId;
+      res = await fetch(API+'/update',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    }else{
+      res = await fetch(API+'/add',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    }
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    closeModal();
+    showToast(editingId?'修改成功':'新增成功','success');
+    loadDevices();
+  }catch(e){
+    showToast('保存失败: '+e.message,'error');
+  }
+}
+
+function openConfirm(id, name){
+  deletingId = id;
+  document.getElementById('confirmName').textContent = name + ' (ID:'+id+')';
+  document.getElementById('confirmDialog').classList.add('active');
+  document.getElementById('confirmBtn').onclick = doDelete;
+}
+
+function closeConfirm(){
+  document.getElementById('confirmDialog').classList.remove('active');
+  deletingId = null;
+}
+
+async function doDelete(){
+  if(!deletingId) return;
+  try{
+    const res = await fetch(API+'/delete/'+deletingId,{method:'DELETE'});
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    closeConfirm();
+    showToast('删除成功','success');
+    loadDevices();
+  }catch(e){
+    showToast('删除失败: '+e.message,'error');
+  }
+}
+
+document.getElementById('searchInput').addEventListener('input', renderTable);
+document.getElementById('typeFilter').addEventListener('change', renderTable);
+
+function showToast(msg, type){
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'toast show ' + type;
+  clearTimeout(el._t);
+  el._t = setTimeout(() => el.classList.remove('show'), 2500);
+}
+
+function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+function fmtTime(t){ return t ? t.replace('T',' ') : ''; }
+
+// close modal on overlay click
+document.getElementById('deviceModal').addEventListener('click',function(e){ if(e.target===this) closeModal(); });
+document.getElementById('confirmDialog').addEventListener('click',function(e){ if(e.target===this) closeConfirm(); });
+
+// init
+loadDevices();
+</script>
+</body>
+</html>

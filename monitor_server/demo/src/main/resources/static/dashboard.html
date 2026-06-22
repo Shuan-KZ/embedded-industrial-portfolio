@@ -1,0 +1,703 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>工业设备状态监控大屏</title>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:"Microsoft YaHei","PingFang SC",sans-serif;background:#0a1628;color:#c8d6e5;min-height:100vh}
+.header{background:linear-gradient(180deg,rgba(10,40,80,0.95),rgba(10,22,40,0.8));padding:0.6rem 1.5rem;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid rgba(56,184,196,0.3);flex-wrap:wrap;gap:0.5rem}
+.header h1{font-size:1.5rem;font-weight:400;letter-spacing:3px;background:linear-gradient(90deg,#38b8c4,#5dd0d8,#38b8c4);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.header-right{display:flex;align-items:center;gap:1rem}
+.header .time{font-size:0.85rem;color:#5a7a9a}
+.btn-export{background:rgba(56,184,196,0.15);color:#38b8c4;border:1px solid rgba(56,184,196,0.3);padding:0.4rem 1rem;border-radius:4px;font-size:0.8rem;cursor:pointer;letter-spacing:1px;transition:all .2s}
+.btn-export:hover{background:rgba(56,184,196,0.25);border-color:#38b8c4}
+
+.tab-bar{display:flex;padding:0 1.5rem;border-bottom:1px solid rgba(56,184,196,0.15)}
+.tab-btn{padding:0.6rem 1.4rem;font-size:0.9rem;color:#5a7a9a;background:none;border:none;cursor:pointer;border-bottom:2px solid transparent;transition:all .2s;letter-spacing:1px}
+.tab-btn:hover{color:#c8d6e5}
+.tab-btn.active{color:#38b8c4;border-bottom-color:#38b8c4}
+.tab-content{display:none}
+.tab-content.active{display:block}
+
+.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:0.8rem;padding:0.8rem 1.5rem}
+.stat-card{background:linear-gradient(135deg,rgba(20,40,70,0.7),rgba(15,30,55,0.5));border:1px solid rgba(56,184,196,0.15);border-radius:8px;padding:0.8rem 1rem;text-align:center}
+.stat-card .num{font-size:1.8rem;font-weight:bold}
+.stat-card .label{font-size:0.8rem;color:#5a7a9a;margin-top:0.15rem}
+
+.main-grid{display:grid;grid-template-columns:2fr 1fr;grid-template-rows:auto auto;gap:0.8rem;padding:0 1.5rem 0.8rem}
+.panel{background:rgba(15,30,55,0.6);border:1px solid rgba(56,184,196,0.12);border-radius:8px;overflow:hidden}
+.panel-title{padding:0.5rem 0.8rem;font-size:0.85rem;color:#38b8c4;border-bottom:1px solid rgba(56,184,196,0.15);background:rgba(10,28,50,0.7);letter-spacing:1px}
+.device-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:0.6rem;padding:0.8rem}
+.device-card{background:rgba(20,40,70,0.4);border:1px solid rgba(56,184,196,0.1);border-radius:6px;padding:0.7rem;text-align:center;transition:all .3s}
+.device-card:hover{border-color:rgba(56,184,196,0.4)}
+.device-card .name{font-size:0.9rem;font-weight:500;margin-bottom:0.4rem}
+.device-card .vals{display:grid;grid-template-columns:1fr 1fr;gap:0.2rem 0.5rem;font-size:0.72rem;color:#7a9ab5}
+.device-card .vals span{text-align:right;color:#c8d6e5;font-weight:500}
+.status-dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:3px}
+.status-dot.green{background:#46c288;box-shadow:0 0 5px #46c288}
+.status-dot.yellow{background:#d89c68;box-shadow:0 0 5px #d89c68}
+.status-dot.red{background:#e0556a;box-shadow:0 0 5px #e0556a;animation:blink .8s infinite}
+@keyframes blink{50%{opacity:0.4}}
+.chart-box{height:300px}
+.alarm-list{padding:0.5rem;max-height:310px;overflow-y:auto}
+.alarm-item{display:flex;justify-content:space-between;align-items:center;padding:0.5rem 0.7rem;margin:0.25rem 0;border-radius:4px;font-size:0.8rem}
+.alarm-item.unresolved{background:rgba(224,85,106,0.12);border-left:3px solid #e0556a}
+.alarm-item.resolved{background:rgba(70,194,136,0.08);border-left:3px solid #46c288;opacity:0.7}
+.alarm-item .info{flex:1}
+.alarm-item .time{font-size:0.72rem;color:#5a7a9a}
+.alarm-item .tag{font-size:0.68rem;padding:0.12rem 0.4rem;border-radius:3px;margin-left:0.4rem}
+.alarm-item .tag.fault{background:rgba(224,85,106,0.2);color:#e0556a}
+.alarm-item .tag.warn{background:rgba(216,156,104,0.2);color:#d89c68}
+.alarm-item .tag.ok{background:rgba(70,194,136,0.15);color:#46c288}
+.bottom-row{display:grid;grid-template-columns:2fr 1fr;gap:0.8rem;padding:0 1.5rem 1rem}
+
+/* OEE row */
+.oee-row{padding:0 1.5rem 0.8rem}
+.oee-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:0.8rem}
+.oee-kpi{background:linear-gradient(135deg,rgba(20,40,70,0.7),rgba(15,30,55,0.5));border:1px solid rgba(56,184,196,0.15);border-radius:8px;padding:0.8rem;text-align:center}
+.oee-kpi .oee-val{font-size:1.6rem;font-weight:bold;color:#38b8c4}
+.oee-kpi .oee-label{font-size:0.78rem;color:#5a7a9a;margin-top:0.15rem}
+.oee-kpi .oee-sub{font-size:0.7rem;color:#7a9ab5;margin-top:0.3rem}
+.oee-kpi.fault .oee-val{color:#e0556a}
+.oee-kpi.warning .oee-val{color:#d89c68}
+
+/* Schedule Tab */
+.schedule-layout{padding:0.8rem 1.5rem 1.5rem}
+.schedule-top{display:flex;align-items:center;gap:1rem;margin-bottom:0.8rem;flex-wrap:wrap}
+.schedule-kpi{background:linear-gradient(135deg,rgba(20,40,70,0.7),rgba(15,30,55,0.5));border:1px solid rgba(56,184,196,0.15);border-radius:8px;padding:0.8rem 1.2rem;text-align:center;min-width:130px}
+.schedule-kpi .kpi-val{font-size:1.6rem;font-weight:bold;color:#38b8c4}
+.schedule-kpi .kpi-label{font-size:0.75rem;color:#5a7a9a;margin-top:0.15rem}
+.schedule-kpi.energy .kpi-val{color:#d89c68}
+.schedule-kpi.unconstrained .kpi-val{color:#7a9ab5}
+.btn-optimize{background:#38b8c4;color:#fff;border:none;padding:0.6rem 1.5rem;border-radius:6px;font-size:0.9rem;cursor:pointer;letter-spacing:1px;transition:all .2s}
+.btn-optimize:hover{background:#2d9da8}
+.btn-optimize:disabled{opacity:0.5;cursor:not-allowed}
+.constraint-list{display:flex;gap:0.6rem;flex-wrap:wrap}
+.constraint-tag{font-size:0.78rem;padding:0.25rem 0.6rem;border-radius:4px}
+.constraint-tag.fault{background:rgba(224,85,106,0.2);color:#e0556a;border:1px solid rgba(224,85,106,0.3)}
+.constraint-tag.warning{background:rgba(216,156,104,0.2);color:#d89c68;border:1px solid rgba(216,156,104,0.3)}
+.no-constraint{font-size:0.82rem;color:#46c288}
+.improvement-badge{font-size:0.72rem;padding:0.2rem 0.5rem;border-radius:3px;margin-left:0.5rem}
+.improvement-badge.good{background:rgba(224,85,106,0.15);color:#e0556a}
+.improvement-badge.info{background:rgba(56,184,196,0.15);color:#38b8c4}
+
+@media(max-width:1200px){
+  .device-grid{grid-template-columns:repeat(2,1fr)}
+  .main-grid{grid-template-columns:1fr}
+  .bottom-row{grid-template-columns:1fr}
+  .stats-row{grid-template-columns:repeat(2,1fr)}
+  .oee-grid{grid-template-columns:repeat(2,1fr)}
+}
+/* System Control Tab */
+.sys-layout{padding:1rem 1.5rem}
+.sys-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;margin-bottom:1rem}
+.sys-card{background:linear-gradient(135deg,rgba(20,40,70,0.8),rgba(15,30,55,0.6));border:1px solid rgba(56,184,196,0.15);border-radius:10px;padding:1.2rem 1rem;text-align:center;transition:all .3s}
+.sys-card:hover{border-color:rgba(56,184,196,0.4);transform:translateY(-2px)}
+.sys-card .sys-icon{font-size:1.8rem;margin-bottom:0.4rem}
+.sys-card .sys-name{font-size:0.9rem;font-weight:500;margin-bottom:0.3rem}
+.sys-card .sys-port{font-size:0.75rem;color:#5a7a9a;margin-bottom:0.5rem}
+.sys-card .sys-status{margin:0.6rem 0}
+.sys-led{display:inline-block;width:12px;height:12px;border-radius:50%;margin-right:6px}
+.sys-led.green{background:#46c288;box-shadow:0 0 10px #46c288;animation:pulse 2s infinite}
+.sys-led.gray{background:#3a5068}
+.sys-led.yellow{background:#d89c68;animation:blink .6s infinite}
+.sys-led.red{background:#e0556a;animation:blink .6s infinite}
+@keyframes pulse{0%,100%{box-shadow:0 0 6px #46c288}50%{box-shadow:0 0 16px #46c288}}
+.sys-card .sys-actions{display:flex;gap:0.5rem;justify-content:center;flex-wrap:wrap}
+.sys-btn{padding:0.3rem 0.8rem;border-radius:4px;font-size:0.75rem;cursor:pointer;border:1px solid;transition:all .2s;background:transparent}
+.sys-btn.start{color:#46c288;border-color:rgba(70,194,136,0.3)}
+.sys-btn.start:hover{background:rgba(70,194,136,0.15)}
+.sys-btn.stop{color:#e0556a;border-color:rgba(224,85,106,0.3)}
+.sys-btn.stop:hover{background:rgba(224,85,106,0.15)}
+.sys-btn.restart{color:#d89c68;border-color:rgba(216,156,104,0.3)}
+.sys-btn.restart:hover{background:rgba(216,156,104,0.15)}
+.sys-btn:disabled{opacity:0.3;cursor:not-allowed}
+.sys-all-row{display:flex;gap:1rem;justify-content:center;margin-bottom:1rem}
+.sys-all-btn{padding:0.6rem 2rem;border-radius:6px;font-size:0.9rem;cursor:pointer;border:none;letter-spacing:1px;transition:all .2s}
+.sys-all-btn.start-all{background:#46c288;color:#fff}
+.sys-all-btn.start-all:hover{background:#3aa070}
+.sys-all-btn.stop-all{background:#e0556a;color:#fff}
+.sys-all-btn.stop-all:hover{background:#c04050}
+.sys-log{background:rgba(5,15,30,0.8);border:1px solid rgba(56,184,196,0.1);border-radius:6px;padding:0.8rem;max-height:200px;overflow-y:auto;font-family:Consolas,monospace;font-size:0.78rem;color:#7a9ab5}
+.sys-log .log-line{margin:0.15rem 0}
+.sys-log .log-line.info{color:#38b8c4}
+.sys-log .log-line.ok{color:#46c288}
+.sys-log .log-line.err{color:#e0556a}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>全链路工业设备状态监控系统</h1>
+  <div class="header-right">
+    <button class="btn-export" onclick="exportReport()" title="导出Excel生产日报">导出日报</button>
+    <div class="time" id="headerTime"></div>
+  </div>
+</div>
+
+<div class="tab-bar">
+  <button class="tab-btn active" onclick="switchTab('monitor')">设备监控</button>
+  <button class="tab-btn" onclick="switchTab('oee')">OEE效率</button>
+  <button class="tab-btn" onclick="switchTab('schedule')">调度优化</button>
+  <button class="tab-btn" onclick="switchTab('system')">系统控制</button>
+</div>
+
+<!-- Monitor Tab -->
+<div class="tab-content active" id="tab-monitor">
+<div class="stats-row" id="statsRow"></div>
+<div class="main-grid">
+  <div class="panel" style="grid-row:span 2">
+    <div class="panel-title">温度趋势</div>
+    <div class="chart-box" id="trendChart"></div>
+  </div>
+  <div class="panel">
+    <div class="panel-title">设备状态面板</div>
+    <div class="device-grid" id="deviceGrid"></div>
+  </div>
+  <div class="panel">
+    <div class="panel-title">最新报警</div>
+    <div class="alarm-list" id="alarmList"></div>
+    <div id="alarmPager" style="display:flex;justify-content:center;gap:0.5rem;padding:0.4rem"></div>
+  </div>
+</div>
+<div class="bottom-row">
+  <div class="panel"><div class="panel-title">累计能耗对比 (kWh)</div><div class="chart-box" id="energyChart"></div></div>
+  <div class="panel"><div class="panel-title">设备状态分布</div><div class="chart-box" id="pieChart"></div></div>
+</div>
+</div>
+
+<!-- OEE Tab -->
+<div class="tab-content" id="tab-oee">
+<div class="oee-row" style="padding-top:1rem;display:flex;justify-content:space-between;align-items:center">
+  <div style="display:flex;align-items:center;gap:0.5rem">
+    <span style="color:#5a7a9a;font-size:0.8rem">统计周期:</span>
+    <select id="oeePeriod" onchange="fetchOEE()" style="background:rgba(20,40,70,0.6);color:#c8d6e5;border:1px solid rgba(56,184,196,0.2);padding:0.3rem 0.6rem;border-radius:4px;font-size:0.75rem">
+      <option value="1">近1小时</option>
+      <option value="6">近6小时</option>
+      <option value="24" selected>近24小时</option>
+      <option value="168">近7天</option>
+    </select>
+  </div>
+</div>
+<div class="oee-row">
+  <div class="oee-grid" id="oeeGrid"></div>
+</div>
+<div style="padding:0 1.5rem 1rem;display:grid;grid-template-columns:2fr 1fr;gap:0.8rem">
+  <div class="panel"><div class="panel-title">OEE综合效率仪表盘</div><div style="height:400px" id="oeeGaugeChart"></div></div>
+  <div class="panel"><div class="panel-title">OEE明细 (A×P×Q)</div><div style="height:400px" id="oeeRadarChart"></div></div>
+</div>
+</div>
+
+<!-- Schedule Tab -->
+<div class="tab-content" id="tab-schedule">
+<div class="schedule-layout">
+  <div class="schedule-top">
+    <div class="schedule-kpi"><div class="kpi-val" id="kpiMakespan">--</div><div class="kpi-label">约束完工时间</div></div>
+    <div class="schedule-kpi energy"><div class="kpi-val" id="kpiEnergy">--</div><div class="kpi-label">约束总能耗</div></div>
+    <div class="schedule-kpi unconstrained" id="uncMakespanCard" style="display:none"><div class="kpi-val" id="kpiUncMakespan">--</div><div class="kpi-label">无约束完工时间</div></div>
+    <div class="schedule-kpi unconstrained" id="uncEnergyCard" style="display:none"><div class="kpi-val" id="kpiUncEnergy">--</div><div class="kpi-label">无约束总能耗</div></div>
+    <button class="btn-optimize" id="btnOptimize" onclick="runOptimize()">重新调度</button>
+    <div class="constraint-list" id="constraintTags"></div>
+  </div>
+  <div class="weight-row" style="display:flex;align-items:center;gap:2rem;margin-bottom:0.8rem;padding:0.5rem 1rem;background:rgba(20,40,70,0.4);border-radius:6px;flex-wrap:wrap">
+    <span style="color:#7a9ab5;font-size:0.85rem">多目标权重:</span>
+    <label style="color:#38b8c4;font-size:0.8rem;cursor:pointer">工期 <b id="wMakespanVal">50</b>%
+      <input type="range" id="wMakespan" min="10" max="90" value="50" oninput="onWeightChange()" style="accent-color:#38b8c4;width:100px;vertical-align:middle">
+    </label>
+    <label style="color:#d89c68;font-size:0.8rem;cursor:pointer">能耗 <b id="wEnergyVal">50</b>%
+      <input type="range" id="wEnergy" min="10" max="90" value="50" oninput="onWeightChange()" style="accent-color:#d89c68;width:100px;vertical-align:middle">
+    </label>
+    <span style="color:#5a7a9a;font-size:0.72rem">拖动滑块改变优化偏重，0.5秒后自动重调度</span>
+  </div>
+  <div id="comparisonBar" style="display:none;margin-bottom:0.8rem;padding:0.5rem 1rem;background:rgba(224,85,106,0.08);border:1px solid rgba(224,85,106,0.2);border-radius:6px;font-size:0.82rem">
+    ⚠ 设备故障导致调度方案劣化：完工时间延长 <b id="compMakespan">--</b>，能耗增加 <b id="compEnergy">--</b>
+  </div>
+  <div class="panel"><div class="panel-title">最优调度甘特图（含设备约束）</div><div style="height:500px" id="ganttChart"></div></div>
+</div>
+</div>
+
+<!-- System Control Tab -->
+<div class="tab-content" id="tab-system">
+<div class="sys-layout">
+  <div class="sys-all-row">
+    <button class="sys-all-btn start-all" onclick="sysStartAll()">一键启动全部</button>
+    <button class="sys-all-btn stop-all" onclick="sysStopAll()">一键停止全部</button>
+  </div>
+  <div style="text-align:center;margin-bottom:1rem;font-size:0.72rem;color:#5a7a9a;padding:0.4rem;background:rgba(56,184,196,0.06);border-radius:6px">
+    提示：SpringBoot / Flask 后端启动请使用本地 <code style="color:#38b8c4">python launcher.py</code> 工具（进程隔离设计），网页控制台提供状态监控、服务停止及健康检查
+  </div>
+  <div class="sys-grid" id="sysGrid"></div>
+  <div class="panel">
+    <div class="panel-title">控制台日志</div>
+    <div class="sys-log" id="sysLog">
+      <div class="log-line info">系统控制台已就绪</div>
+    </div>
+  </div>
+</div>
+</div>
+
+<script>
+// ========== Shared ==========
+const MONITOR_API = '/api';
+const SCHEDULER_URL = 'http://127.0.0.1:5000/api/optimize';
+const COLORS = ['#38b8c4','#5dd0d8','#46c288','#d89c68','#a28ed8','#e0556a','#7ec8e3','#f4a261'];
+let trendData = {};
+let trendChart, energyChart, pieChart, ganttChart, oeeGaugeChart, oeeRadarChart;
+let currentTab = 'monitor';
+let scheduleLoaded = false;
+
+function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function fmtTime(t){ return t ? t.replace('T',' ') : ''; }
+
+function updateTime(){
+  document.getElementById('headerTime').textContent = new Date().toLocaleString('zh-CN');
+}
+
+function switchTab(tab){
+  currentTab = tab;
+  document.querySelectorAll('.tab-btn').forEach(b => {
+    const map = {'monitor':'设备监控','oee':'OEE效率','schedule':'调度优化','system':'系统控制'};
+    b.classList.toggle('active', map[tab] === b.textContent.trim());
+  });
+  document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+  document.getElementById('tab-'+tab).classList.add('active');
+  if(tab === 'monitor') fetchData();
+  else if(tab === 'oee') fetchOEE();
+  else if(tab === 'schedule' && !scheduleLoaded) runOptimize();
+  else if(tab === 'system') sysFetchStatus();
+  setTimeout(()=>{ ganttChart?.resize(); trendChart?.resize(); energyChart?.resize(); pieChart?.resize(); oeeGaugeChart?.resize(); oeeRadarChart?.resize(); }, 200);
+}
+
+function exportReport(){
+  const date = new Date().toISOString().slice(0,10);
+  window.open(MONITOR_API+'/export/daily-report?date='+date, '_blank');
+}
+
+// ========== Monitor Logic ==========
+async function fetchData(){
+  try{
+    const [devResult, alarmResult] = await Promise.allSettled([
+      fetch(MONITOR_API+'/devices'), fetch(MONITOR_API+'/alarms')
+    ]);
+    const devData = devResult.status === 'fulfilled' ? (await devResult.value.json()).data : null;
+    let alarms = alarmResult.status === 'fulfilled' ? (await alarmResult.value.json()).data : [];
+    if(!devData) return;
+    window._alarms = alarms || [];
+    renderStats(devData);
+    renderDevices(devData.devices);
+    updateTrend(devData.devices);
+    renderAlarms(window._alarms);
+    updateEnergy(devData.devices);
+    updatePie(devData);
+  }catch(e){ console.error(e); }
+}
+
+function renderStats(d){
+  const t=d.totalDevices||0,n=d.normalCount||0,w=d.warningCount||0,f=d.faultCount||0;
+  document.getElementById('statsRow').innerHTML=
+    `<div class="stat-card" style="border-left:3px solid #38b8c4"><div class="num" style="color:#38b8c4">${t}</div><div class="label">设备总数</div></div>
+    <div class="stat-card" style="border-left:3px solid #46c288"><div class="num" style="color:#46c288">${n}</div><div class="label">正常运行</div></div>
+    <div class="stat-card" style="border-left:3px solid #d89c68"><div class="num" style="color:#d89c68">${w}</div><div class="label">预警</div></div>
+    <div class="stat-card" style="border-left:3px solid #e0556a"><div class="num" style="color:#e0556a">${f}</div><div class="label">故障</div></div>`;
+}
+
+function renderDevices(devices){
+  if(!devices) return;
+  document.getElementById('deviceGrid').innerHTML = devices.map(d => {
+    const s = d.dataStatus||0;
+    const cls = s===0?'green':(s===1?'yellow':'red');
+    const sText = s===0?'正常':(s===1?'预警':'故障');
+    return `<div class="device-card">
+      <div class="name"><span class="status-dot ${cls}"></span>${esc(d.name)}</div>
+      <div class="vals">
+        温度<span>${d.temperature!=null?d.temperature.toFixed(1)+'℃':'--'}</span>
+        振动<span>${d.vibration!=null?d.vibration.toFixed(1)+'mm/s':'--'}</span>
+        压力<span>${d.pressure!=null?d.pressure.toFixed(2)+'MPa':'--'}</span>
+        状态<span style="color:${s===0?'#46c288':(s===1?'#d89c68':'#e0556a')}">${sText}</span>
+        能耗<span>${d.cumulativeEnergy!=null?d.cumulativeEnergy.toFixed(1)+'kWh':'--'}</span>
+      </div></div>`;
+  }).join('');
+}
+
+function updateTrend(devices){
+  if(!devices) return;
+  const now = new Date();
+  const timeStr = now.getHours().toString().padStart(2,'0')+':'+now.getMinutes().toString().padStart(2,'0')+':'+now.getSeconds().toString().padStart(2,'0');
+  devices.forEach(d => {
+    if(!trendData[d.id]) trendData[d.id]={times:[],temps:[]};
+    const td = trendData[d.id];
+    td.times.push(timeStr); td.temps.push(d.temperature!=null?d.temperature:0);
+    if(td.times.length>20){td.times.shift();td.temps.shift();}
+  });
+  const series = devices.map((d,i)=>({
+    name:d.name,type:'line',data:trendData[d.id]?.temps||[],smooth:true,symbol:'none',
+    lineStyle:{color:COLORS[i],width:2},
+    areaStyle:{color:new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:COLORS[i]+'40'},{offset:1,color:COLORS[i]+'00'}])}
+  }));
+  if(!trendChart) trendChart = echarts.init(document.getElementById('trendChart'));
+  trendChart.setOption({
+    backgroundColor:'transparent',grid:{left:50,right:30,top:20,bottom:30},
+    xAxis:{type:'category',data:trendData[devices[0]?.id]?.times||[],axisLine:{lineStyle:{color:'#2a4a6a'}},axisLabel:{color:'#5a7a9a',fontSize:10}},
+    yAxis:{type:'value',name:'℃',nameTextStyle:{color:'#5a7a9a'},axisLabel:{color:'#5a7a9a'},splitLine:{lineStyle:{color:'rgba(42,74,106,0.3)'}}},
+    series,legend:{bottom:0,textStyle:{color:'#5a7a9a',fontSize:10},data:devices.map(d=>d.name)},tooltip:{trigger:'axis'}
+  });
+}
+
+function updateEnergy(devices){
+  if(!devices) return;
+  if(!energyChart) energyChart = echarts.init(document.getElementById('energyChart'));
+  energyChart.setOption({
+    backgroundColor:'transparent',grid:{left:50,right:20,top:10,bottom:30},
+    xAxis:{type:'category',data:devices.map(d=>d.name),axisLabel:{color:'#5a7a9a',fontSize:9,rotate:15},axisLine:{lineStyle:{color:'#2a4a6a'}}},
+    yAxis:{type:'value',name:'kWh',nameTextStyle:{color:'#5a7a9a'},axisLabel:{color:'#5a7a9a'},splitLine:{lineStyle:{color:'rgba(42,74,106,0.3)'}}},
+    series:[{type:'bar',data:devices.map((d,i)=>({value:d.cumulativeEnergy||0,itemStyle:{color:new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:COLORS[i]},{offset:1,color:COLORS[i]+'60'}])}})),barWidth:'50%',itemStyle:{borderRadius:[4,4,0,0]}}],
+    tooltip:{trigger:'axis'}
+  });
+}
+
+function updatePie(data){
+  if(!pieChart) pieChart = echarts.init(document.getElementById('pieChart'));
+  pieChart.setOption({
+    backgroundColor:'transparent',
+    series:[{type:'pie',radius:['50%','75%'],center:['50%','55%'],
+      data:[{value:data.normalCount,name:'正常',itemStyle:{color:'#46c288'}},{value:data.warningCount,name:'预警',itemStyle:{color:'#d89c68'}},{value:data.faultCount,name:'故障',itemStyle:{color:'#e0556a'}}],
+      label:{color:'#7a9ab5',fontSize:11},emphasis:{label:{fontSize:14}}
+    }]
+  });
+}
+
+let alarmPage = 0;
+const ALARM_PAGE_SIZE = 5;
+function renderAlarms(alarms){
+  const el = document.getElementById('alarmList');
+  const pager = document.getElementById('alarmPager');
+  if(!alarms||alarms.length===0){
+    el.innerHTML='<div style="text-align:center;padding:1.5rem;color:#5a7a9a">暂无报警记录</div>';
+    pager.innerHTML='';return;
+  }
+  const totalPages = Math.ceil(alarms.length / ALARM_PAGE_SIZE);
+  if(alarmPage >= totalPages) alarmPage = totalPages - 1;
+  if(alarmPage < 0) alarmPage = 0;
+  const start = alarmPage * ALARM_PAGE_SIZE;
+  const page = alarms.slice(start, start + ALARM_PAGE_SIZE);
+  el.innerHTML = page.map(a => {
+    const cls=a.resolved?'resolved':'unresolved';
+    const tagCls=a.resolved?'ok':(a.alarmType==='温度过高'?'fault':'warn');
+    return `<div class="alarm-item ${cls}">
+      <div class="info"><div>${esc(a.message)}</div><div class="time">${fmtTime(a.triggerTime)}</div></div>
+      <span class="tag ${tagCls}">${a.resolved?'已恢复':a.alarmType}</span></div>`;
+  }).join('');
+  pager.innerHTML = totalPages > 1 ? `
+    <button onclick="alarmPage=0;renderAlarms(window._alarms||[])" style="background:rgba(56,184,196,0.1);color:#38b8c4;border:1px solid rgba(56,184,196,0.2);padding:0.2rem 0.6rem;border-radius:3px;cursor:pointer;font-size:0.7rem">首页</button>
+    <button onclick="alarmPage=Math.max(0,alarmPage-1);renderAlarms(window._alarms||[])" style="background:rgba(56,184,196,0.1);color:#38b8c4;border:1px solid rgba(56,184,196,0.2);padding:0.2rem 0.6rem;border-radius:3px;cursor:pointer;font-size:0.7rem">上一页</button>
+    <span style="color:#7a9ab5;font-size:0.75rem">${alarmPage+1}/${totalPages} (共${alarms.length}条)</span>
+    <button onclick="alarmPage=Math.min(totalPages-1,alarmPage+1);renderAlarms(window._alarms||[])" style="background:rgba(56,184,196,0.1);color:#38b8c4;border:1px solid rgba(56,184,196,0.2);padding:0.2rem 0.6rem;border-radius:3px;cursor:pointer;font-size:0.7rem">下一页</button>
+    <button onclick="alarmPage=totalPages-1;renderAlarms(window._alarms||[])" style="background:rgba(56,184,196,0.1);color:#38b8c4;border:1px solid rgba(56,184,196,0.2);padding:0.2rem 0.6rem;border-radius:3px;cursor:pointer;font-size:0.7rem">末页</button>
+  ` : '';
+}
+
+// ========== OEE Logic ==========
+async function fetchOEE(){
+  try{
+    const hours = document.getElementById('oeePeriod')?.value || '24';
+    const resp = await fetch(MONITOR_API+'/oee?periodHours='+hours);
+    const data = (await resp.json()).data;
+    if(!data) return;
+    renderOEEGrid(data.devices);
+    renderOEEGauge(data);
+    renderOEERadar(data.devices);
+  }catch(e){ console.error(e); }
+}
+
+function renderOEEGrid(devices){
+  if(!devices) return;
+  document.getElementById('oeeGrid').innerHTML = devices.map(d => {
+    let cls = ''; if(d.status===2) cls='fault'; else if(d.status===1) cls='warning';
+    return `<div class="oee-kpi ${cls}">
+      <div style="font-size:0.85rem;color:#c8d6e5">${esc(d.deviceName)}</div>
+      <div class="oee-val">${d.oee}%</div>
+      <div class="oee-label">综合效率 OEE</div>
+      <div class="oee-sub">A:${d.availability}% | P:${d.performance}% | Q:${d.quality}%</div>
+    </div>`;
+  }).join('');
+}
+
+function renderOEEGauge(data){
+  const devices = data.devices || [];
+  if(!oeeGaugeChart) oeeGaugeChart = echarts.init(document.getElementById('oeeGaugeChart'));
+
+  const series = devices.map((d,i) => ({
+    type:'gauge', center:[(i%3)*33+17+'%', i<3?'28%':'72%'], radius:'80%',
+    min:0, max:100,
+    startAngle:210, endAngle:-30,
+    title:{show:true,offsetCenter:[0,'80%'],fontSize:10,color:'#7a9ab5'},
+    detail:{show:true,fontSize:16,fontWeight:'bold',offsetCenter:[0,'55%'],formatter:'{value}%'},
+    data:[{value:d.oee,name:d.deviceName,title:{fontSize:9,color:'#c8d6e5'}}],
+    axisLine:{lineStyle:{width:8,color:[[0.6,'#e0556a'],[0.8,'#d89c68'],[1,'#46c288']]}},
+    axisTick:{distance:-8,length:5,lineStyle:{color:'#5a7a9a',width:1}},
+    splitLine:{distance:-10,length:8,lineStyle:{color:'#5a7a9a',width:1.5}},
+    axisLabel:{distance:-22,color:'#5a7a9a',fontSize:8},
+    pointer:{length:'70%',width:4,itemStyle:{color:COLORS[i]}},
+    itemStyle:{color:COLORS[i]}
+  }));
+
+  oeeGaugeChart.setOption({backgroundColor:'transparent',series});
+}
+
+function renderOEERadar(devices){
+  if(!devices) return;
+  if(!oeeRadarChart) oeeRadarChart = echarts.init(document.getElementById('oeeRadarChart'));
+  oeeRadarChart.setOption({
+    backgroundColor:'transparent',
+    legend:{bottom:0,textStyle:{color:'#5a7a9a',fontSize:10},data:devices.map(d=>d.deviceName)},
+    radar:{
+      center:['50%','45%'],radius:'65%',
+      indicator:[{name:'可用率',max:100},{name:'表现性',max:100},{name:'质量率',max:100}],
+      axisName:{color:'#7a9ab5',fontSize:10},
+      splitArea:{areaStyle:{color:['rgba(56,184,196,0.02)','rgba(56,184,196,0.04)']}},
+      splitLine:{lineStyle:{color:'rgba(42,74,106,0.4)'}},
+      axisLine:{lineStyle:{color:'rgba(42,74,106,0.4)'}}
+    },
+    series:[{
+      type:'radar',
+      data:devices.map((d,i)=>({
+        value:[d.availability,d.performance,d.quality],
+        name:d.deviceName,
+        areaStyle:{color:COLORS[i]+'15'},
+        lineStyle:{color:COLORS[i],width:1.5},
+        itemStyle:{color:COLORS[i]}
+      }))
+    }]
+  });
+}
+
+// ========== Schedule Logic ==========
+let weightTimeout;
+function onWeightChange(){
+  const wm = parseInt(document.getElementById('wMakespan').value);
+  const we = 100 - wm;
+  document.getElementById('wMakespanVal').textContent = wm;
+  document.getElementById('wEnergy').value = we;
+  document.getElementById('wEnergyVal').textContent = we;
+  clearTimeout(weightTimeout);
+  weightTimeout = setTimeout(runOptimize, 500);
+}
+document.getElementById('wEnergy').addEventListener('input', function(){
+  const we = parseInt(this.value);
+  const wm = 100 - we;
+  document.getElementById('wMakespan').value = wm;
+  document.getElementById('wMakespanVal').textContent = wm;
+  document.getElementById('wEnergyVal').textContent = we;
+  clearTimeout(weightTimeout);
+  weightTimeout = setTimeout(runOptimize, 500);
+});
+
+async function runOptimize(){
+  const btn = document.getElementById('btnOptimize');
+  btn.disabled = true; btn.textContent = '优化中...';
+  try{
+    const resp = await fetch(SCHEDULER_URL, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({use_device_status:true,pop_size:20,max_iter:100,
+        weight_makespan:parseInt(document.getElementById('wMakespan').value)/100,
+        weight_energy:parseInt(document.getElementById('wEnergy').value)/100})
+    });
+    const data = await resp.json();
+    if(data.error){ alert('调度失败: '+data.error); return; }
+    scheduleLoaded = true;
+
+    // 约束结果
+    document.getElementById('kpiMakespan').textContent = data.makespan;
+    document.getElementById('kpiEnergy').textContent = data.energy;
+
+    // 无约束对比
+    const unc = data.unconstrained;
+    const hasComp = unc && unc.makespan != null;
+    document.getElementById('uncMakespanCard').style.display = hasComp?'':'none';
+    document.getElementById('uncEnergyCard').style.display = hasComp?'':'none';
+    document.getElementById('comparisonBar').style.display = hasComp?'':'none';
+
+    if(hasComp){
+      document.getElementById('kpiUncMakespan').textContent = unc.makespan;
+      document.getElementById('kpiUncEnergy').textContent = unc.energy;
+      document.getElementById('compMakespan').textContent = (unc.improvement_makespan||0)+'%';
+      document.getElementById('compEnergy').textContent = (unc.improvement_energy||0)+'%';
+      // 高亮劣化
+      const mc = document.getElementById('kpiMakespan');
+      mc.style.color = unc.improvement_makespan > 0 ? '#e0556a' : '#38b8c4';
+    }
+
+    renderConstraints(data.constrained_machines, data.device_status);
+    renderGantt(data.gantt_data);
+  }catch(e){
+    alert('调度服务未连接，请先启动 scheduler.py');
+  }finally{
+    btn.disabled = false; btn.textContent = '重新调度';
+  }
+}
+
+function renderConstraints(constrained, devStatus){
+  const el = document.getElementById('constraintTags');
+  if(!constrained||constrained.length===0){
+    el.innerHTML='<span class="no-constraint">全部设备正常参与调度</span>';return;
+  }
+  el.innerHTML = constrained.map(c =>
+    `<span class="constraint-tag ${c.status}">${c.name}: ${c.action}</span>`
+  ).join('');
+}
+
+function renderGantt(gantt){
+  if(!gantt||!gantt.tasks) return;
+  const machines = gantt.machines;
+  const tasks = gantt.tasks;
+  const maxTime = Math.max(...tasks.map(t=>t.end),10);
+
+  if(!ganttChart) ganttChart = echarts.init(document.getElementById('ganttChart'));
+
+  ganttChart.setOption({
+    backgroundColor:'transparent',
+    tooltip:{formatter:p=>{
+      const d=p.data; return `${d.machineName}<br/>工件${d.job+1}-工序${d.op+1}<br/>${d.start} → ${d.end} (${d.duration}min)`;
+    }},
+    grid:{left:120,right:30,top:10,bottom:30},
+    xAxis:{type:'value',min:0,max:Math.ceil(maxTime*1.05),axisLabel:{color:'#5a7a9a'},axisLine:{lineStyle:{color:'#2a4a6a'}},splitLine:{lineStyle:{color:'rgba(42,74,106,0.3)'}}},
+    yAxis:{type:'category',data:machines,axisLabel:{color:'#c8d6e5',fontSize:11},axisLine:{lineStyle:{color:'#2a4a6a'}}},
+    series:[{
+      type:'custom',
+      renderItem:function(params,api){
+        const catIdx=api.value(0);
+        const start=api.coord([api.value(1),catIdx]);
+        const end=api.coord([api.value(2),catIdx]);
+        const h=api.size([0,1])[1]*0.6;
+        const y=start[1]-h/2;
+        const w=end[0]-start[0];
+        const label='J'+(api.value(3)+1)+'-'+(api.value(4)+1);
+        const color=COLORS[api.value(3)%COLORS.length];
+        return {type:'group',children:[
+          {type:'rect',shape:{x:start[0],y:y,width:w,height:h},style:{fill:color,stroke:'#0a1628',lineWidth:1}},
+          {type:'text',x:start[0]+w/2,y:y+h/2,style:{text:label,fill:'#fff',fontSize:10,fontWeight:'bold',textAlign:'center',textVerticalAlign:'middle'},silent:true}
+        ]};
+      },
+      data:tasks.map(t=>[t.machine,t.start,t.end,t.job,t.op,t.machineName]),
+      encode:{x:[1,2],y:0}
+    }]
+  });
+}
+
+// ========== System Control Logic ==========
+const SYS_URL = 'http://127.0.0.1:5000/api/system';
+let sysLogLines = [];
+const SVC_MAP = {
+  spring: {icon:'API', name:'SpringBoot', port:8081, desc:'REST API后端'},
+  flask:  {icon:'ALG', name:'Flask IMOGJO', port:5000, desc:'调度优化引擎'},
+  hmi:    {icon:'HMI', name:'HMI WinForm', port:'--', desc:'C#上位机仿真'}
+};
+
+function sysLog(msg, type='info'){
+  const t = new Date().toLocaleTimeString('zh-CN');
+  sysLogLines.push({t, msg, type});
+  if(sysLogLines.length > 50) sysLogLines.shift();
+  const el = document.getElementById('sysLog');
+  if(el) el.innerHTML = sysLogLines.map(l =>
+    `<div class="log-line ${l.type}">${l.t}  ${l.msg}</div>`
+  ).join('') + '<div class="log-line info">控制台已就绪</div>';
+  if(el) el.scrollTop = el.scrollHeight;
+}
+
+async function sysFetchStatus(){
+  try{
+    const resp = await fetch(SYS_URL+'/status');
+    const data = await resp.json();
+    renderSysCards(data.services || {});
+  }catch(e){
+    renderSysCards(null);
+  }
+}
+
+function renderSysCards(services){
+  const el = document.getElementById('sysGrid');
+  const keys = ['spring','flask','hmi'];
+  el.innerHTML = keys.map(k => {
+    const svc = SVC_MAP[k];
+    let running = false, pid = null;
+    if(services && services[k]){
+      running = services[k].running;
+      pid = services[k].pid;
+    }
+    const ledCls = running ? 'green' : 'gray';
+    const statusTxt = running ? 'RUNNING' : 'STOPPED';
+    const statusCol = running ? '#46c288' : '#5a7a9a';
+    const portTxt = svc.port || '--';
+
+    let actions = '';
+    if(k === 'flask' && running){
+      actions = `<button class="sys-btn stop" onclick="sysStop('${k}')">停止</button>
+                 <button class="sys-btn restart" onclick="sysRestart('${k}')">重启</button>`;
+    } else if(running){
+      actions = `<button class="sys-btn stop" onclick="sysStop('${k}')">停止</button>
+                 <button class="sys-btn restart" onclick="sysRestart('${k}')">重启</button>`;
+    } else {
+      actions = `<button class="sys-btn start" onclick="sysStart('${k}')">启动</button>`;
+    }
+    if(k === 'hmi'){
+      actions = `<button class="sys-btn start" onclick="sysStart('${k}')">启动</button>
+                 <button class="sys-btn stop" onclick="sysStop('${k}')">停止</button>`;
+    }
+
+    return `<div class="sys-card">
+      <div class="sys-icon">${svc.icon}</div>
+      <div class="sys-name">${svc.name}</div>
+      <div class="sys-port">端口 ${portTxt}  ${pid?('PID:'+pid):''}</div>
+      <div class="sys-status"><span class="sys-led ${ledCls}"></span><span style="color:${statusCol};font-weight:500">${statusTxt}</span></div>
+      <div class="sys-actions">${actions}</div>
+    </div>`;
+  }).join('');
+}
+
+async function sysCall(method, name){
+  sysLog(`正在执行 ${method} ${name}...`, 'info');
+  try{
+    const resp = await fetch(SYS_URL+'/'+method+'/'+name, {method:'POST'});
+    const data = await resp.json();
+    if(data.ok){
+      sysLog(`${name} ${method}: ${data.message}`, 'ok');
+    } else {
+      sysLog(`${name} ${method} 失败: ${data.message||data.error}`, 'err');
+    }
+  }catch(e){
+    sysLog(`${name} ${method} 连接失败 (Flask未启动?)`, 'err');
+  }
+  setTimeout(sysFetchStatus, 1000);
+}
+
+function sysStart(name){ sysCall('start', name); }
+function sysStop(name){ sysCall('stop', name); }
+function sysRestart(name){
+  sysCall('stop', name);
+  setTimeout(()=>sysCall('start', name), 2000);
+}
+function sysStartAll(){
+  sysLog('一键启动全部...', 'info');
+  ['spring','flask'].forEach((n,i)=>setTimeout(()=>sysStart(n), i*500));
+}
+function sysStopAll(){
+  sysLog('一键停止全部...', 'info');
+  ['spring','hmi'].forEach(n=>sysStop(n));
+  setTimeout(()=>sysStop('flask'), 1500);
+}
+
+// ========== Init ==========
+updateTime();
+setInterval(updateTime,1000);
+fetchData();
+setInterval(()=>{if(currentTab==='monitor')fetchData();else if(currentTab==='oee')fetchOEE();else if(currentTab==='system')sysFetchStatus();},3000);
+
+window.addEventListener('resize',()=>{
+  trendChart?.resize();energyChart?.resize();pieChart?.resize();ganttChart?.resize();oeeGaugeChart?.resize();oeeRadarChart?.resize();
+});
+</script>
+</body>
+</html>

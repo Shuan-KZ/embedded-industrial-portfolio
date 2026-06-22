@@ -1,0 +1,32 @@
+快速开始
+
+1. 双击 start.bat 启动全部服务
+2. 等待约15秒，浏览器自动打开监控大屏
+
+默认 H2 内嵌数据库，零安装。可选 MySQL（见下方）。
+
+演示模式说明
+
+默认仿真模式，无需 PLC 硬件，双击 start.bat 即可运行。
+
+切换真实 PLC 模式：
+打开 02_上位机\DeviceHMI\mode.txt，将 sim 改为 plc 即可。
+改完重启 HMI 生效，无需重编译。
+
+数据库切换
+
+默认 H2 内嵌（零配置），数据文件在 monitor_server/demo/data/。
+切 MySQL：安装 MySQL 8.0 → 执行 init_db.bat → 修改 start.bat 切到 MySQL profile。
+
+端口清单
+
+5000  Flask 算法服务
+8081  SpringBoot 后端
+
+常见问题
+
+Q: 大屏打不开？
+A: 确认 SpringBoot 已启动，浏览器访问 http://localhost:8081/dashboard.html
+
+Q: 端口被占用？
+A: 命令行执行 netstat -ano | findstr "8081" 查看占用进程

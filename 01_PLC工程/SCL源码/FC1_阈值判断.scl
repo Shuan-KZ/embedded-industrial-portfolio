@@ -1,0 +1,50 @@
+FUNCTION "阈值判断" : Void
+TITLE = '三级阈值判定函数'
+AUTHOR : 'KuangZhiqi'
+FAMILY : 'DeviceMonitor'
+VERSION : 0.3
+{ S7_Optimized_Access := 'FALSE' }
+// 三级阈值判定：0=正常 / 1=预警 / 2=故障
+// 支持故障自锁：故障发生后需手动复位才能恢复到正常
+
+// 输入参数
+VAR_INPUT
+    当前値 : Real;      // 传感器当前值(温度°C)
+    预警阈值 : Real;     // 触发预警的门限
+    故障阈值 : Real;     // 触发故障的门限
+    当前状态 : Int;      // 当前状态(0正常/1预警/2故障)
+    故障自锁 : Bool;     // TRUE=故障需手动复位, FALSE=自动恢复
+END_VAR
+
+// 输出参数
+VAR_OUTPUT
+    新状态 : Int;        // 判定后的状态(0正常/1预警/2故障)
+END_VAR
+
+VAR_TEMP
+    _t_上一状态 : Int;
+END_VAR
+
+BEGIN
+    REGION 阈值判定逻辑
+        #_t_上一状态 := #当前状态;
+        #新状态 := #当前状态;
+
+        // 故障：温度≥故障阈值
+        IF #当前值 >= #故障阈值 THEN
+            #新状态 := 2;
+        // 预警：60≤温度＜80，且设备当前无故障
+        ELSIF #当前值 >= #预警阈值 AND #当前值 < #故障阈值 AND #当前状态 = 0 THEN
+            #新状态 := 1;
+        // 正常：温度低于预警，无故障自锁
+        ELSIF #当前值 < #预警阈值 AND #当前状态 = 0 AND NOT #故障自锁 THEN
+            #新状态 := 0;
+        END_IF;
+
+        // 故障自锁：曾经故障，降温后保持故障状态
+        IF #故障自锁 AND #_t_上一状态 = 2 AND #当前值 < #故障阈值 THEN
+            #新状态 := 2;
+        END_IF;
+    END_REGION
+
+END_FUNCTION

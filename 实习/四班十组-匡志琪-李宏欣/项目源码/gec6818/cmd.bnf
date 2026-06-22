@@ -1,0 +1,9 @@
+﻿#BNF+IAT 1.0 UTF-8;
+
+!grammar cmd;
+!slot <cmd>;
+!start <cmdstart>;
+
+<cmdstart>:<cmd>;
+
+<cmd>:开窗!id(1)|开门!id(2)|开灯!id(3)|关窗!id(4)|关门!id(5)|关灯!id(6)|上一张!id(7)|唱首歌给我听!id(8)|你好!id(20)|小雷!id(100)|小雷小雷!id(100)|退出!id(999)|不玩了!id(999);

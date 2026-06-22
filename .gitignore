@@ -1,0 +1,56 @@
+# Build outputs
+bin/
+obj/
+target/
+__pycache__/
+*.pyc
+
+# H2 embedded database files
+monitor_server/demo/data/
+*.mv.db
+*.trace.db
+
+# IDE
+.vs/
+.vscode/
+.idea/
+*.suo
+*.user
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# HMI runtime mode
+02_上位机/DeviceHMI/mode.txt
+
+# TIA Portal project internals (only SCL源码 is needed)
+01_PLC工程/设备监控系统/
+
+# Binaries
+*.exe
+*.dll
+
+# Maven wrapper jar (generated, huge)
+monitor_server/demo/.mvn/wrapper/maven-wrapper.jar
+
+# Video files (too large for GitHub)
+*.mp4
+
+# Compiled binaries / prebuilt libraries
+*.o
+*.so
+*.so.*
+*.a
+*.ko
+a.out
+._*
+*.mod.o*
+modules.order
+
+# SpringBoot auto-generated .gitignore/.gitattributes in submodule
+monitor_server/demo/.gitignore
+monitor_server/demo/.gitattributes

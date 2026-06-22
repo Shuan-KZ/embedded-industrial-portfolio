@@ -1,0 +1,96 @@
+#include "lcd.h"
+#include "event.h"
+
+unsigned char word[24*25/8] = {
+	/*--  文字:  徐	--*/
+	/*--  微软雅黑14;  此字体下对应的点阵为：宽x高=19x25	--*/
+	/*--  宽度不是8的倍数，现调整为：宽度x高度=24x25  --*/
+	0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x0C,0x1C,0x00,0x1E,
+	0x3C,0x00,0x1C,0x3E,0x00,0x38,0x77,0x00,0x70,0xE3,0x00,0x6F,0xE3,0x80,0xEF,0xC1,
+	0xE0,0x1F,0xFF,0xE0,0x38,0x1C,0x00,0x38,0x1C,0x00,0x78,0x1C,0x00,0xFB,0xFF,0xE0,
+	0xF8,0x1C,0x00,0x39,0xDF,0x00,0x3B,0x9F,0xC0,0x3F,0x9D,0xE0,0x3F,0xDC,0xE0,0x38,
+	0xF8,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+};
+
+int main()
+{
+    //打开显示屏
+    //open_lcd();
+
+    //显示颜色
+    //write_lcd(0xFF0000); //红色
+
+    //关闭显示屏
+    //close_lcd();
+
+    //显示屏初始化
+    lcd_init();
+
+	//画背景色
+	lcd_draw_background(0xFFFFFF); //白色
+
+	//显示字符
+	lcd_drwa_word(100, 100, 24, 25, word, 0xFF0000);
+
+	//显示数字
+	lcd_drwa_num(123, 100, 200, 16, 25, 0xFF0000);
+
+	//显示图片
+	//lcd_drwa_bmp(0, 0, "1.bmp");
+
+	/*
+	while(1)
+    {
+        //显示图片1
+        lcd_drwa_bmp(0, 0, "1.bmp");
+        sleep(3); //延时3秒
+        //显示图片2
+        lcd_drwa_bmp(0, 0, "2.bmp");
+        sleep(3);
+    }
+	*/
+
+	/*
+    char* bmps[] = {"1.bmp", "2.bmp"};
+    int i = 0;
+    while(1)
+    {
+		lcd_drwa_bmp(0, 0, bmps[i]);
+		sleep(3);
+
+		i = (i+1)%2;
+    }
+	*/
+
+	//获取触摸点坐标
+	/*
+	int x = -1, y = -1;
+	while(1)
+	{
+		get_event_xy(&x, &y);
+		printf("x = %d, y = %d\n", x, y);
+	}
+	*/
+
+	//获取滑动方向
+	int dir = -1;
+	while(1)
+	{
+		dir = get_event_direction();
+		if(dir == RIGHT)
+		{
+			printf("RIGHT\n");
+		}
+		else if(dir == LEFT)
+		{
+			printf("LEFT\n");
+		}
+	}
+
+	
+
+	//解除显示屏初始化
+	lcd_uninit();
+}
+
+

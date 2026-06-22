@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.demo.mapper.AlarmRecordMapper">
+
+    <resultMap id="alarmRecordMap" type="com.example.demo.entity.AlarmRecord">
+        <id column="id" property="id"/>
+        <result column="device_id" property="deviceId"/>
+        <result column="alarm_type" property="alarmType"/>
+        <result column="alarm_value" property="alarmValue"/>
+        <result column="threshold_value" property="thresholdValue"/>
+        <result column="message" property="message"/>
+        <result column="resolved" property="resolved"/>
+        <result column="trigger_time" property="triggerTime"/>
+        <result column="resolve_time" property="resolveTime"/>
+    </resultMap>
+
+    <select id="findAll" resultMap="alarmRecordMap">
+        SELECT * FROM alarm_record ORDER BY trigger_time DESC LIMIT 10
+    </select>
+
+    <select id="findByDeviceId" resultMap="alarmRecordMap">
+        SELECT * FROM alarm_record WHERE device_id = #{deviceId} ORDER BY trigger_time DESC
+    </select>
+
+    <insert id="insert" parameterType="com.example.demo.entity.AlarmRecord"
+            useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO alarm_record (device_id, alarm_type, alarm_value, threshold_value, message, resolved, trigger_time)
+        VALUES (#{deviceId}, #{alarmType}, #{alarmValue}, #{thresholdValue}, #{message}, 0, NOW())
+    </insert>
+
+    <update id="resolve" parameterType="long">
+        UPDATE alarm_record SET resolved = 1, resolve_time = NOW() WHERE id = #{id}
+    </update>
+
+</mapper>

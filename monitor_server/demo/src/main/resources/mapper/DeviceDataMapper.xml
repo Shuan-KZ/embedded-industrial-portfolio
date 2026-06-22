@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.demo.mapper.DeviceDataMapper">
+
+    <resultMap id="deviceDataMap" type="com.example.demo.entity.DeviceData">
+        <id column="id" property="id"/>
+        <result column="device_id" property="deviceId"/>
+        <result column="temperature" property="temperature"/>
+        <result column="vibration" property="vibration"/>
+        <result column="pressure" property="pressure"/>
+        <result column="status" property="status"/>
+        <result column="cumulative_energy" property="cumulativeEnergy"/>
+        <result column="collect_time" property="collectTime"/>
+    </resultMap>
+
+    <insert id="insert" parameterType="com.example.demo.entity.DeviceData"
+            useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO device_data (device_id, temperature, vibration, pressure, status, cumulative_energy, collect_time)
+        VALUES (#{deviceId}, #{temperature}, #{vibration}, #{pressure}, #{status}, #{cumulativeEnergy}, #{collectTime})
+    </insert>
+
+    <insert id="insertBatch" parameterType="list">
+        INSERT INTO device_data (device_id, temperature, vibration, pressure, status, cumulative_energy, collect_time) VALUES
+        <foreach collection="list" item="d" separator=",">
+            (#{d.deviceId}, #{d.temperature}, #{d.vibration}, #{d.pressure}, #{d.status}, #{d.cumulativeEnergy}, #{d.collectTime})
+        </foreach>
+    </insert>
+
+    <select id="findRange" resultMap="deviceDataMap">
+        SELECT * FROM device_data
+        WHERE device_id = #{deviceId}
+        <if test="start != null and start != ''">AND collect_time &gt;= #{start}</if>
+        <if test="end != null and end != ''">AND collect_time &lt;= #{end}</if>
+        ORDER BY collect_time ASC
+    </select>
+
+    <select id="findLatestByDeviceId" resultMap="deviceDataMap">
+        SELECT * FROM device_data
+        WHERE device_id = #{deviceId}
+        ORDER BY collect_time DESC
+        LIMIT 1
+    </select>
+
+</mapper>
