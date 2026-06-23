@@ -15,20 +15,20 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(NoResourceFoundException.class)
     public Result<?> handleNotFound(NoResourceFoundException e) {
-        return Result.fail(404, "资源不存在");
+        return Result.fail(404, "Resource not found");
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public Result<?> handleValidation(MethodArgumentNotValidException e) {
         String msg = e.getBindingResult().getFieldErrors().stream()
                 .map(err -> err.getField() + ": " + err.getDefaultMessage())
-                .reduce((a, b) -> a + "; " + b).orElse("参数校验失败");
+                .reduce((a, b) -> a + "; " + b).orElse("Validation failed");
         return Result.fail(400, msg);
     }
 
     @ExceptionHandler(Exception.class)
     public Result<?> handleException(Exception e) {
         log.error("Unexpected error: {}", e.getMessage(), e);
-        return Result.fail("服务器内部错误: " + e.getMessage());
+        return Result.fail("Internal error: " + e.getMessage());
     }
 }

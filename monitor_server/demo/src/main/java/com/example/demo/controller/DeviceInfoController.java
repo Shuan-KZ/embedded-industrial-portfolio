@@ -34,7 +34,7 @@ public class DeviceInfoController {
                 return Result.ok(d);
             }
         }
-        return Result.fail(404, "设备不存在");
+        return Result.fail(404, "Device not found");
     }
 
     // ======= Old CRUD endpoints (compatible with management page) =======
@@ -47,7 +47,7 @@ public class DeviceInfoController {
     @GetMapping("/device/{id}")
     public Result<DeviceInfo> getRawById(@PathVariable Long id) {
         DeviceInfo d = service.findById(id);
-        if (d == null) return Result.fail(404, "设备不存在");
+        if (d == null) return Result.fail(404, "Device not found");
         return Result.ok(d);
     }
 

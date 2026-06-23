@@ -44,13 +44,13 @@ SERVICES = {
         'name': 'NetToPLCsim', 'port': 102, 'type': 'manual',
         'cwd': str(PROJECT_ROOT / '01_PLC工程'),
         'exe': 'NetToPLCsim.exe',
-        'desc': 'PLC sim bridge (需Admin)',
+        'desc': 'PLC sim bridge (Admin required)',
         'icon': 'PLC',
     },
     'plcsim': {
         'name': 'PLCSIM + TIA', 'port': None, 'type': 'manual',
         'cwd': None,
-        'desc': 'TIA Portal下载+切RUN',
+        'desc': 'TIA Portal download + RUN',
         'icon': 'SIM',
     },
     'spring': {
@@ -70,7 +70,7 @@ SERVICES = {
         'icon': 'ALG',
     },
     'hmi': {
-        'name': 'HMI (C#)', 'port': None, 'type': 'manual',
+        'name': 'HMI (C#)', 'port': None, 'type': 'process',
         'cwd': str(HMI_DIR) if HMI_DIR.exists() else None,
         'cmd': ['dotnet', 'run'],
         'process': 'DeviceHMI.exe',
@@ -89,24 +89,24 @@ def env_precheck():
     if spring_cwd and Path(spring_cwd).exists():
         mvnw = Path(spring_cwd) / ('mvnw.cmd' if sys.platform == 'win32' else 'mvnw')
         if not mvnw.exists():
-            warnings.append(f'Maven wrapper 未找到: {mvnw}，请确认 SpringBoot 项目完整')
+            warnings.append(f'Maven wrapper not found: {mvnw}')
     else:
-        warnings.append('SpringBoot 项目目录未找到，请确认 monitor_server/demo 路径')
+        warnings.append('SpringBoot project dir not found: monitor_server/demo')
 
     # Check Python packages
     if not RICH:
-        warnings.append('rich 库未安装，终端UI退化 — 运行: pip install rich')
+        warnings.append('rich not installed, degraded UI — run: pip install rich')
 
     try:
         import flask
         import flask_cors
     except ImportError:
-        warnings.append('flask/flask_cors 未安装 — 运行: pip install flask flask-cors')
+        warnings.append('flask/flask_cors not installed — run: pip install flask flask-cors')
 
     # Check HMI project
     hmi_cwd = SERVICES['hmi'].get('cwd')
     if hmi_cwd and not Path(hmi_cwd).exists():
-        warnings.append('HMI 上位机项目未找到，C#仿真服务不可用')
+        warnings.append('HMI project not found at 02_上位机/DeviceHMI')
 
     return warnings
 
@@ -327,10 +327,10 @@ def print_startup_order():
     """Show manual steps that must be done before auto-start"""
     if RICH:
         console.print()
-        console.print("[bold yellow]启动前手动操作:[/bold yellow]")
-        console.print("  [1] NetToPLCsim  [bold red]管理员运行[/bold red] → Add站点 → Start Server")
-        console.print("  [2] TIA Portal → PLCSIM → 下载程序 → CPU切 [bold green]RUN[/bold green]")
-        console.print("  [3] 然后运行 [bold cyan]python launcher.py start[/bold cyan] 一键启动后端")
+        console.print("[bold yellow]Manual steps before auto-start:[/bold yellow]")
+        console.print("  [1] NetToPLCsim  [bold red]Run as Admin[/bold red] -> Add Station -> Start Server")
+        console.print("  [2] TIA Portal -> PLCSIM -> Download -> CPU to [bold green]RUN[/bold green]")
+        console.print("  [3] Then run [bold cyan]python launcher.py start[/bold cyan] for backend")
         console.print()
 
 

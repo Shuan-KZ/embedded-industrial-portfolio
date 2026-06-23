@@ -1,20 +1,20 @@
 """
-调度优化微服务 — Flask :5000
-核心算法：IMOGJO（改进多目标金豺优化），改自毕业论文2.0.py
+Scheduling optimization microservice — Flask :5000
+Core algorithm: IMOGJO (Improved Multi-Objective Golden Jackal Optimization)
 
-做了什么：
-- 用元启发式算法同时优化两个目标：完工时间最短 + 能耗最低
-- 从SpringBoot拿设备实时状态，故障机器自动剔除、预警机器降速1.2倍
-- 输出Pareto前沿 + 甘特图数据 + 无约束对比（看故障劣化了多少）
-- 支持工期/能耗权重调节，滑块拖动实时重新选优
+What it does:
+- Metaheuristic bi-objective optimization: min makespan + min energy
+- Pulls real-time device status from SpringBoot, auto-removes fault machines, slows warning machines 1.2x
+- Outputs Pareto front + Gantt chart data + unconstrained comparison (fault degradation)
+- Supports makespan/energy weight adjustment with slider live re-selection
 
-算法思路（简版）：
-1. 种群用实数编码，前半段OS（工序排序）+ 后半段MS（机器选择）
-2. 解码后用非支配排序分Pareto层级，拥挤距离保持多样性
-3. 模拟金豺狩猎行为更新种群（雄豺+雌豺引导，Levy飞行探索，VNS局部搜索）
-4. 迭代结束后输出Pareto前沿，前端按权重选最优方案
+Algorithm summary:
+1. Real-coded population: OS segment (operation sequence) + MS segment (machine selection)
+2. Non-dominated sorting into Pareto ranks, crowding distance for diversity
+3. Golden jackal hunting behavior (male+female guide, Levy flight exploration, VNS local search)
+4. After iteration: output Pareto front; frontend selects best by weighted sum
 
-参考：Chopra N. et al., Golden Jackal Optimization, Expert Systems with Applications, 2022
+Reference: Chopra N. et al., Golden Jackal Optimization, Expert Systems with Applications, 2022
 """
 
 import numpy as np
@@ -71,7 +71,7 @@ def apply_device_constraints(case, devices):
             for job in range(case['n_jobs']):
                 for op in range(case['jobs_n_ops'][job]):
                     case['processing_time'][job][op][mach_id] = 0
-            constrained.append({'machine': mach_id, 'name': DEVICE_NAMES[dev_id], 'status': 'fault', 'action': '已剔除'})
+            constrained.append({'machine': mach_id, 'name': DEVICE_NAMES[dev_id], 'status': 'fault', 'action': 'removed'})
 
         elif status == 1:
             for job in range(case['n_jobs']):
@@ -79,7 +79,7 @@ def apply_device_constraints(case, devices):
                     pt = case['processing_time'][job][op][mach_id]
                     if pt != 0:
                         case['processing_time'][job][op][mach_id] = round(pt * 1.2, 2)
-            constrained.append({'machine': mach_id, 'name': DEVICE_NAMES[dev_id], 'status': 'warning', 'action': '降速x1.2'})
+            constrained.append({'machine': mach_id, 'name': DEVICE_NAMES[dev_id], 'status': 'warning', 'action': 'slowed x1.2'})
 
     return case, constrained
 
@@ -549,7 +549,7 @@ def build_gantt_data(case, os_seq, ms_seq):
         for (start, end, job, op) in tasks[m]:
             gantt_tasks.append({
                 'machine': m,
-                'machineName': DEVICE_NAMES.get(m + 1, f'设备{m + 1}'),
+                'machineName': DEVICE_NAMES.get(m + 1, f'Machine {m + 1}'),
                 'job': job,
                 'op': op,
                 'start': round(start, 2),
@@ -591,7 +591,7 @@ def optimize():
     if not device_status:
         device_status = {
             'total': 0, 'normal': 0, 'warning': 0, 'fault': 0,
-            'connected': False, 'note': '后端未连接，使用默认参数'
+            'connected': False, 'note': 'Backend not connected, using defaults'
         }
 
     case, constrained = build_case_from_devices(devices, jobs_data)
@@ -599,10 +599,10 @@ def optimize():
     try:
         pareto_sols, pareto_fits = imogjo(case, pop_size=pop_size, max_iter=max_iter)
     except Exception as e:
-        return jsonify({'error': f'优化计算失败: {str(e)}'}), 500
+        return jsonify({'error': f'Optimization failed: {str(e)}'}), 500
 
     if not pareto_sols:
-        return jsonify({'error': '无可选机器——可能全部设备处于故障状态'}), 400
+        return jsonify({'error': 'No available machines — all devices may be in fault state'}), 400
 
     # Weighted selection from Pareto front
     ms_vals = [f[0] for f in pareto_fits]
@@ -773,8 +773,8 @@ def system_start(name):
 
 
 if __name__ == '__main__':
-    print("IMOGJO调度优化微服务启动")
-    print(f"后端地址: {BACKEND_URL}")
-    print("接口: POST http://127.0.0.1:5000/api/optimize")
-    print("健康检查: GET http://127.0.0.1:5000/api/health")
+    print("IMOGJO Scheduling Microservice Started")
+    print(f"Backend URL: {BACKEND_URL}")
+    print("Optimize: POST http://127.0.0.1:5000/api/optimize")
+    print("Health:    GET http://127.0.0.1:5000/api/health")
     app.run(host='127.0.0.1', port=5000, debug=False)

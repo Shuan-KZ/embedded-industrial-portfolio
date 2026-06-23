@@ -150,14 +150,14 @@ public class ReportController {
             dataStyle.setBorderRight(BorderStyle.THIN);
 
             // Sheet 1
-            Sheet sheet1 = wb.createSheet("设备运行数据");
+            Sheet sheet1 = wb.createSheet("Device Run Data");
             Row titleRow1 = sheet1.createRow(0);
-            titleRow1.createCell(0).setCellValue("设备运行数据日报 — " + dateLabel);
+            titleRow1.createCell(0).setCellValue("Device Run Data Daily Report — " + dateLabel);
             titleRow1.getCell(0).setCellStyle(titleStyle);
             sheet1.addMergedRegion(new CellRangeAddress(0, 0, 0, 6));
 
             Row header1 = sheet1.createRow(2);
-            String[] cols1 = {"设备名称", "设备编码", "温度(℃)", "振动(mm/s)", "压力(MPa)", "累计能耗(kWh)", "状态"};
+            String[] cols1 = {"Device Name", "Device Code", "Temp(C)", "Vibration(mm/s)", "Pressure(MPa)", "Cumul.Energy(kWh)", "Status"};
             for (int i = 0; i < cols1.length; i++) {
                 Cell c = header1.createCell(i); c.setCellValue(cols1[i]); c.setCellStyle(headerStyle);
             }
@@ -184,7 +184,7 @@ public class ReportController {
                 c5.setCellStyle(dataStyle);
                 Cell c6 = r.createCell(6);
                 int status = latest != null && latest.getStatus() != null ? latest.getStatus() : 0;
-                c6.setCellValue(status == 0 ? "正常" : (status == 1 ? "预警" : "故障"));
+                c6.setCellValue(status == 0 ? "Normal" : (status == 1 ? "Warning" : "Fault"));
                 c6.setCellStyle(dataStyle);
             }
 
@@ -192,14 +192,14 @@ public class ReportController {
             sheet1.setColumnWidth(0, 22 * 256);
 
             // Sheet 2
-            Sheet sheet2 = wb.createSheet("报警记录");
+            Sheet sheet2 = wb.createSheet("Alarm Records");
             Row titleRow2 = sheet2.createRow(0);
-            titleRow2.createCell(0).setCellValue("报警记录汇总 — " + dateLabel);
+            titleRow2.createCell(0).setCellValue("Alarm Records Summary — " + dateLabel);
             titleRow2.getCell(0).setCellStyle(titleStyle);
             sheet2.addMergedRegion(new CellRangeAddress(0, 0, 0, 5));
 
             Row header2 = sheet2.createRow(2);
-            String[] cols2 = {"设备名称", "报警类型", "报警值", "阈值", "报警描述", "触发时间"};
+            String[] cols2 = {"Device Name", "Alarm Type", "Alarm Value", "Threshold", "Description", "Trigger Time"};
             for (int i = 0; i < cols2.length; i++) {
                 Cell c = header2.createCell(i); c.setCellValue(cols2[i]); c.setCellStyle(headerStyle);
             }
@@ -211,7 +211,7 @@ public class ReportController {
             int rowIdx2 = 3;
             for (AlarmRecord a : alarms) {
                 Row r = sheet2.createRow(rowIdx2++);
-                r.createCell(0).setCellValue(devNameMap.getOrDefault(a.getDeviceId(), "未知"));
+                r.createCell(0).setCellValue(devNameMap.getOrDefault(a.getDeviceId(), "Unknown"));
                 r.getCell(0).setCellStyle(dataStyle);
                 r.createCell(1).setCellValue(a.getAlarmType() != null ? a.getAlarmType() : "");
                 r.getCell(1).setCellStyle(dataStyle);
@@ -235,14 +235,14 @@ public class ReportController {
             @SuppressWarnings("unchecked")
             List<Map<String, Object>> oeeList = (List<Map<String, Object>>) oeeData.get("devices");
 
-            Sheet sheet3 = wb.createSheet("OEE综合效率");
+            Sheet sheet3 = wb.createSheet("OEE Efficiency");
             Row titleRow3 = sheet3.createRow(0);
-            titleRow3.createCell(0).setCellValue("OEE设备综合效率 — " + dateLabel);
+            titleRow3.createCell(0).setCellValue("OEE Overall Equipment Effectiveness — " + dateLabel);
             titleRow3.getCell(0).setCellStyle(titleStyle);
             sheet3.addMergedRegion(new CellRangeAddress(0, 0, 0, 4));
 
             Row header3 = sheet3.createRow(2);
-            String[] cols3 = {"设备名称", "可用率(%)", "表现性(%)", "质量率(%)", "OEE(%)"};
+            String[] cols3 = {"Device Name", "Availability(%)", "Performance(%)", "Quality(%)", "OEE(%)"};
             for (int i = 0; i < cols3.length; i++) {
                 Cell c = header3.createCell(i); c.setCellValue(cols3[i]); c.setCellStyle(headerStyle);
             }
@@ -268,7 +268,7 @@ public class ReportController {
 
             Row avgRow = sheet3.createRow(rowIdx3);
             Cell avgCell = avgRow.createCell(0);
-            avgCell.setCellValue("平均OEE");
+            avgCell.setCellValue("Average OEE");
             avgCell.setCellStyle(headerStyle);
             Cell avgVal = avgRow.createCell(4);
             avgVal.setCellValue(((Number) oeeData.get("avgOEE")).doubleValue());
@@ -278,7 +278,7 @@ public class ReportController {
             sheet3.setColumnWidth(0, 22 * 256);
 
             response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
-            String filename = "生产日报_" + dateLabel + ".xlsx";
+            String filename = "Daily_Report_" + dateLabel + ".xlsx";
             response.setHeader("Content-Disposition", "attachment; filename*=UTF-8''" + URLEncoder.encode(filename, StandardCharsets.UTF_8));
             OutputStream os = response.getOutputStream();
             wb.write(os);
@@ -290,7 +290,7 @@ public class ReportController {
                 response.reset();
                 response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
                 response.setContentType("application/json;charset=UTF-8");
-                response.getWriter().write("{\"code\":500,\"msg\":\"Excel生成失败: " + e.getMessage() + "\"}");
+                response.getWriter().write("{\"code\":500,\"msg\":\"Excel generation failed: " + e.getMessage() + "\"}");
             } catch (Exception ignored) {}
         }
     }

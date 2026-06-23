@@ -50,15 +50,15 @@ public class DataController {
         LocalDateTime now = LocalDateTime.now();
         for (DeviceData d : list) {
             if (d.getTemperature() != null && d.getTemperature() > 80) {
-                tryAddAlarm(d.getDeviceId(), "温度过高", d.getTemperature(), 80.0,
-                        "设备" + d.getDeviceId() + " 温度过高: " + d.getTemperature() + "℃", now);
+                tryAddAlarm(d.getDeviceId(), "Over Temperature", d.getTemperature(), 80.0,
+                        "Device " + d.getDeviceId() + " over temp: " + d.getTemperature() + "C", now);
             } else if (d.getTemperature() != null && d.getTemperature() > 60) {
-                tryAddAlarm(d.getDeviceId(), "温度偏高", d.getTemperature(), 60.0,
-                        "设备" + d.getDeviceId() + " 温度偏高: " + d.getTemperature() + "℃", now);
+                tryAddAlarm(d.getDeviceId(), "High Temperature", d.getTemperature(), 60.0,
+                        "Device " + d.getDeviceId() + " high temp: " + d.getTemperature() + "C", now);
             }
             if (d.getVibration() != null && d.getVibration() > 5.0) {
-                tryAddAlarm(d.getDeviceId(), "振动异常", d.getVibration(), 5.0,
-                        "设备" + d.getDeviceId() + " 振动异常: " + d.getVibration() + "mm/s", now);
+                tryAddAlarm(d.getDeviceId(), "Vibration Anomaly", d.getVibration(), 5.0,
+                        "Device " + d.getDeviceId() + " vibration anomaly: " + d.getVibration() + "mm/s", now);
             }
         }
     }
@@ -68,7 +68,7 @@ public class DataController {
         String key = deviceId + "-" + type;
         LocalDateTime last = lastAlarmTime.get(key);
         if (last != null && java.time.Duration.between(last, now).getSeconds() < 10) {
-            return; // 10秒内同设备同类型不重复入库
+            return; // dedup: same device+type within 10s
         }
         lastAlarmTime.put(key, now);
         AlarmRecord alarm = new AlarmRecord();

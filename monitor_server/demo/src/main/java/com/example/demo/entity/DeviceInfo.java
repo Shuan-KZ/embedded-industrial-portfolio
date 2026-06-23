@@ -5,9 +5,9 @@ import java.time.LocalDateTime;
 
 public class DeviceInfo {
     private Long id;
-    @NotBlank(message = "设备名称不能为空")
+    @NotBlank(message = "Device name is required")
     private String deviceName;
-    @NotBlank(message = "设备编码不能为空")
+    @NotBlank(message = "Device code is required")
     private String deviceCode;
     private String deviceType;
     private String status;
