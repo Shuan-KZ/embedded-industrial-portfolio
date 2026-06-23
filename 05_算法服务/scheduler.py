@@ -576,12 +576,15 @@ def optimize():
     if use_device:
         dev_data = fetch_device_status()
         if dev_data:
-            devices = dev_data.get('devices', [])
+            inner = dev_data.get('data', {})
+            devices = inner.get('devices', [])
+            if devices:
+                devices.sort(key=lambda d: d.get('id', 0))
             device_status = {
-                'total': dev_data.get('totalDevices', 0),
-                'normal': dev_data.get('normalCount', 0),
-                'warning': dev_data.get('warningCount', 0),
-                'fault': dev_data.get('faultCount', 0),
+                'total': inner.get('totalDevices', 0),
+                'normal': inner.get('normalCount', 0),
+                'warning': inner.get('warningCount', 0),
+                'fault': inner.get('faultCount', 0),
                 'connected': True
             }
 

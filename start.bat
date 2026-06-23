@@ -34,7 +34,7 @@ echo.
 REM --- 启动后端 ---
 echo [启动] SpringBoot (:8081) ...
 REM  默认 H2 内嵌数据库。如需切 MySQL：把下面一行注释掉，取消下一行的注释
-start "SpringBoot" /MIN cmd /c "cd /d "%~dp0monitor_server\demo" && mvnw spring-boot:run -q"
+start "SpringBoot" /MIN cmd /c "cd /d "%~dp0monitor_server\demo" && mvnw.cmd spring-boot:run -q"
 REM start "SpringBoot" /MIN cmd /c "cd /d "%~dp0monitor_server\demo" && mvnw spring-boot:run -q -Dspring-boot.run.profiles=mysql"
 
 echo [启动] Flask (:5000) ...

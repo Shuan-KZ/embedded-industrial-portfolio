@@ -5,6 +5,9 @@ target/
 __pycache__/
 *.pyc
 
+# Vendored Python deps (portable)
+vendor/
+
 # H2 embedded database files
 monitor_server/demo/data/
 *.mv.db
