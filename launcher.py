@@ -56,7 +56,7 @@ SERVICES = {
     'spring': {
         'name': 'SpringBoot', 'port': 8081, 'type': 'process',
         'cwd': str(SPRING_DIR) if SPRING_DIR.exists() else None,
-        'cmd': ['mvnw.cmd', 'spring-boot:run', '-q'],
+        'cmd': [str(SPRING_DIR / 'mvnw.cmd'), 'spring-boot:run', '-q'],
         'health': 'http://localhost:8081/api/devices',
         'desc': 'REST API backend',
         'icon': 'API',
